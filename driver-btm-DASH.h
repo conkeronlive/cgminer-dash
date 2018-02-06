@@ -484,6 +484,12 @@ struct work_buf
 } __attribute__((packed, aligned(4)));
 */
 
+struct pll_volt
+{
+    int const volt;
+    unsigned int volpll;
+};
+
 struct pll_freq
 {
     int const freq;
@@ -501,6 +507,35 @@ static char nibble[] =
     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
 
+static struct pll_volt volt_pll_map[] =
+{
+    {255, 0xff},
+    {245, 0xf5},
+    {235, 0xeb},
+    {225, 0xeb},
+    {215, 0xe1},
+    {205, 0xcd},
+    {195, 0xc3},
+    {185, 0xb9},
+    {175, 0xaf},
+    {165, 0xa5},
+    {155, 0x9b},
+    {145, 0x91},
+    {135, 0x87},
+    {125, 0x7d},
+    {115, 0x73},
+    {105, 0x69},
+    {95, 0x5f},
+    {85, 0x55},
+    {75, 0x4b},
+    {65, 0x41},
+    {55, 0x37},
+    {45, 0x2d},
+    {35, 0x23},
+    {25, 0x19},
+    {15, 0x0f},
+    {5, 0x05}
+};
 
 static struct pll_freq freq_pll_map[] =
 {
