@@ -47,24 +47,24 @@
 
 /****************** checked ***************************/
 #ifndef JZ4775
-int const plug[BITMAIN_MAX_CHAIN_NUM] = {51,48,47,44};
-int const tty[BITMAIN_MAX_CHAIN_NUM] = {1,2,4,5};
+int const plug[BITMAIN_MAX_CHAIN_NUM] = {51,48,47};
+int const tty[BITMAIN_MAX_CHAIN_NUM] = {1,2,4};
 int const beep = 20;
 int const red_led = 45;
 int const green_led = 23;
 int const fan_speed[BITMAIN_MAX_FAN_NUM] = {112,110};
-int const g_gpio_data[BITMAIN_MAX_CHAIN_NUM] = {5, 4, 27, 22};
+int const g_gpio_data[BITMAIN_MAX_CHAIN_NUM] = {5, 4, 27};
 #else
-int const plug[BITMAIN_MAX_CHAIN_NUM] = {184,185,187,186};
-int const tty[BITMAIN_MAX_CHAIN_NUM] = {0,1,2,3};
+int const plug[BITMAIN_MAX_CHAIN_NUM] = {184,185,187};
+int const tty[BITMAIN_MAX_CHAIN_NUM] = {0,1,2};
 int const beep = 81;
 int const red_led = 126;
 int const green_led = 127;
 int const fan_speed[BITMAIN_MAX_FAN_NUM] = {38,41};
-int const g_gpio_data[BITMAIN_MAX_CHAIN_NUM] = {192, 193, 194, 195};
+int const g_gpio_data[BITMAIN_MAX_CHAIN_NUM] = {192, 193, 194};
 #endif
 unsigned char bt8d = 0x1a;
-int const i2c_slave_addr[BITMAIN_MAX_CHAIN_NUM] = {0xa0,0xa2,0xa4,0xa6};
+int const i2c_slave_addr[BITMAIN_MAX_CHAIN_NUM] = {0xa0,0xa2,0xa4};
 
 pthread_mutex_t reinit_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t i2c_mutex = PTHREAD_MUTEX_INITIALIZER;  // used when cpu operates i2c interface
@@ -130,15 +130,15 @@ uint64_t h_each_chain[BITMAIN_MAX_CHAIN_NUM] = {0};
 double each_chain_h_avg[BITMAIN_MAX_CHAIN_NUM] = {0};
 double geach_chain_h_all = 0;
 unsigned char hash_board_id[BITMAIN_MAX_CHAIN_NUM][12];
-unsigned char voltage[BITMAIN_MAX_CHAIN_NUM] = {0,0,0,0};
+unsigned char voltage[BITMAIN_MAX_CHAIN_NUM] = {0,0,0};
 bool need_recheck = false;
 pthread_mutex_t reg_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t nonce_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t tty_write_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t temp_buf_mutex = PTHREAD_MUTEX_INITIALIZER;
-static bool start_send[BITMAIN_MAX_CHAIN_NUM] = {false,false,false,false};
-static bool start_recv[BITMAIN_MAX_CHAIN_NUM] = {false,false,false,false};
-static bool reiniting[BITMAIN_MAX_CHAIN_NUM] = {false,false,false,false};
+static bool start_send[BITMAIN_MAX_CHAIN_NUM] = {false,false,false};
+static bool start_recv[BITMAIN_MAX_CHAIN_NUM] = {false,false,false};
+static bool reiniting[BITMAIN_MAX_CHAIN_NUM] = {false,false,false};
 
 
 bool once_error = false;
@@ -146,7 +146,7 @@ bool status_error = false;
 bool check_rate = false;
 bool gBegin_get_nonce = false;
 bool send_heart = true;
-bool new_block[BITMAIN_MAX_CHAIN_NUM] = {false, false, false, false};
+bool new_block[BITMAIN_MAX_CHAIN_NUM] = {false, false, false};
 uint64_t hashboard_average_hash_rate[BITMAIN_MAX_CHAIN_NUM] = {0};
 uint64_t hashboard_real_time_hash_rate[BITMAIN_MAX_CHAIN_NUM] = {0};
 struct nonce_buf nonce_fifo;
@@ -1741,7 +1741,7 @@ void every_chain_set_voltage_PIC16F1704_new(unsigned short voltage)
             pthread_mutex_lock(&iic_mutex);
             if(unlikely(ioctl(dev.i2c_fd,I2C_SLAVE,i2c_slave_addr[which_chain] >> 1 ) < 0))
                 applog(LOG_ERR, "ioctl error @ line %d",__LINE__);
-            set_PIC16F1704_voltage_new(pic_voltage1);
+            set_PIC16F1704_voltage_new(voltage);
             pthread_mutex_unlock(&iic_mutex);
         }
         cgsleep_ms(100);
@@ -2198,6 +2198,28 @@ static void get_plldata(unsigned int freq, unsigned int *vil_data)
     applog(LOG_DEBUG, "%s: vil_data = 0x%08x", __FUNCTION__, *vil_data);
 }
 
+static void get_pllvoldata(unsigned int volt, unsigned int *vol_data)
+{                  
+    unsigned int i; 
+    char voldivider[32] = {0};
+
+    for(i = 0; i < sizeof(volt_pll_map)/sizeof(volt_pll_map[0]); i++)
+    {             
+        if(volt_pll_map[i].volt == volt)
+            break;          
+    }            
+
+    if(i == sizeof(volt_pll_map)/sizeof(volt_pll_map[0]))
+    {
+        applog(LOG_WARNING,"error volt,set default volt(255) instead");
+        i = 0;
+    }
+
+    sprintf(voldivider, "%04x", volt_pll_map[i].volpll);
+    *vol_data = volt_pll_map[i].volpll;
+
+    applog(LOG_DEBUG, "%s: vol_data = 0x%08x", __FUNCTION__, *vol_data);
+}
 
 void set_frequency_chain(unsigned char which_chain,unsigned int frequency)
 {
@@ -3267,6 +3289,13 @@ int bitmain_DASH_init(struct bitmain_DASH_info *info)
 
     open_core();
 
+    //set voltage
+    unsigned int voltage = opt_bitmain_DASH_voltage;
+    unsigned int volt_data = 0;
+    get_pllvoldata(voltage, &volt_data);
+
+    every_chain_set_voltage_PIC16F1704_new(volt_data);	
+	
     // create some pthread
     ret = create_bitmain_check_fan_pthread();
     if(ret == -8)
@@ -5019,7 +5048,7 @@ static bool bitmain_DASH_prepare(struct thr_info *thr)
         .fan_pwm_percent            = opt_bitmain_fan_pwm,
         .temperature                = 80,
         .frequency                  = opt_bitmain_DASH_freq,
-        .voltage                    = {0x07,0x25},
+        .voltage                    = opt_bitmain_DASH_voltage,
         .chain_check_time_integer   = 10,
         .chain_check_time_fractions = 10,
         .timeout_data_integer       = 0,
