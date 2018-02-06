@@ -1,3 +1,6 @@
+This fork allows voltage to be adjusted from cgminer.conf, As always, mods like this might void the warranty. 
+Bitmain is under no obligation to honor your warranty should this firmware cause any damage.
+
 This is a multi-threaded multi-pool FPGA and ASIC miner for bitcoin.
 
 This code is provided entirely free of charge by the programmer in his spare
